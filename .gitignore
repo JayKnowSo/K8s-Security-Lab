@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+*.swp
+
+# Kubernetes secrets - never commit these
+*.secret.yaml
+*-secret.yaml
+secrets/
+
+# Local kind cluster config
+kubeconfig*
