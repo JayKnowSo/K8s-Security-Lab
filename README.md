@@ -1,5 +1,7 @@
 # K8s Security Lab
 
+![CI](https://github.com/JayKnowSo/K8s-Security-Lab/actions/workflows/ci.yaml/badge.svg)
+
 A hardened Kubernetes environment demonstrating defense-in-depth security controls across the full workload lifecycle — from admission through runtime.
 
 ## Security Architecture
@@ -21,3 +23,7 @@ A hardened Kubernetes environment demonstrating defense-in-depth security contro
 ## Stack
 
 kind v0.22.0 · kubectl v1.34.1 · Falco · Trivy Operator
+
+## ADRs
+
+- [ADR-001 — Local Cluster Tooling](docs/adr/ADR-001-local-cluster-tooling.md)
