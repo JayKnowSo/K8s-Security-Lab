@@ -1,0 +1,31 @@
+# CI PIPELINE - K8s Security Lab
+# Validates all Kubernetes manifests on every push and pull request
+# Blocks merges if any manifest fails validation
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-manifests:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: v1.29.2
+
+      - name: Validate manifests
+        run: |
+          kubectl apply --dry-run=client -f namespaces.yaml
+          kubectl apply --dry-run=client -f rbac.yaml
+          kubectl apply --dry-run=client -f networkpolicy.yaml
+          kubectl apply --dry-run=client -f compliant-pod.yaml
