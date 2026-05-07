@@ -1,6 +1,6 @@
 # CI PIPELINE - K8s Security Lab
-# Validates all Kubernetes manifests on every push and pull request
-# Blocks merges if any manifest fails validation
+# Validates all Kubernetes manifests against upstream schemas on every push
+# No live cluster required — kubeconform validates offline against k8s API schemas
 
 name: CI
 
@@ -18,14 +18,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: v1.29.2
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
 
       - name: Validate manifests
         run: |
-          kubectl apply --dry-run=client -f namespaces.yaml
-          kubectl apply --dry-run=client -f rbac.yaml
-          kubectl apply --dry-run=client -f networkpolicy.yaml
-          kubectl apply --dry-run=client -f compliant-pod.yaml
+          kubeconform -strict -summary \
+            namespaces.yaml \
+            rbac.yaml \
+            networkpolicy.yaml \
+            compliant-pod.yaml
