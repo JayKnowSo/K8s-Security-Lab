@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: production-app
+  namespace: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: production-app-role
+  namespace: production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: production-app-binding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: production-app
+  namespace: production
+roleRef:
+  kind: Role
+  name: production-app-role
+  apiGroup: rbac.authorization.k8s.io

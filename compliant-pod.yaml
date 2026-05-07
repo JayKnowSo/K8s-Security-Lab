@@ -1,0 +1,26 @@
+# COMPLIANT POD - production namespace
+# Purpose: example of a fully secured pod meeting all security requirements
+
+# Labels: used by NetworkPolicy allow-app-traffic to permit controlled traffic
+# ServiceAccount: uses least-privilege production-app identity, not default
+# SecurityContext: enforces non-root, no privilege escalation, dropped capabilities
+apiVersion: v1
+kind: Pod
+metadata:
+  name: compliant-pod
+  namespace: production
+  labels:
+    app: compliant-pod
+spec:
+  serviceAccountName: production-app
+  containers:
+  - name: compliant-pod
+    image: nginxinc/nginx-unprivileged:alpine
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
