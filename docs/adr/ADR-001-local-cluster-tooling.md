@@ -4,21 +4,20 @@
 Accepted
 
 ## Context
-A local Kubernetes cluster is required for development and security testing without incurring cloud infrastructure costs. Options evaluated: kind, minikube, k3s.
+Security controls must be validated against a conformant Kubernetes API before targeting production EKS. Deployment environment is WSL2 — no hypervisor, no cloud spend.
 
 ## Decision
-Selected kind (Kubernetes IN Docker) as the local cluster tool.
+kind (Kubernetes IN Docker) v0.22.0
 
 ## Rationale
-- Runs entirely inside Docker — no VM overhead, no hypervisor dependency
-- Consistent behavior with production Kubernetes clusters
-- Industry standard for CI/CD pipeline testing
-- Zero cost — no cloud spend required during development
-- Native multi-node cluster support for future network policy testing
+- Runs inside existing Docker daemon — zero additional dependencies
+- Passes Kubernetes conformance tests — behavior is identical to EKS/GKE/AKS
+- Native multi-node support — required for NetworkPolicy and inter-pod traffic testing
+- CI/CD compatible — spins up in GitHub Actions runners without elevated privileges
 
 ## Alternatives Rejected
-- **minikube** — requires VM or Docker driver, heavier resource footprint
-- **k3s** — lightweight but diverges from standard Kubernetes API behavior
+- **minikube** — VM-based by default, hypervisor dependency conflicts with WSL2
+- **k3s** — API deviations from upstream Kubernetes invalidate conformance assumptions
 
 ## Consequences
-All security controls built here are portable to production EKS, GKE, or AKS clusters without modification.
+All manifests — PSA, RBAC, NetworkPolicy — apply to production clusters without modification.
