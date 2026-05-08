@@ -9,3 +9,4 @@ secrets/
 
 # Local kind cluster config
 kubeconfig*
+main
