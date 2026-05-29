@@ -1,0 +1,10 @@
+# Falco Custom Rules — K8s Security Lab
+# Detects container escape attempts via shell spawn
+# MITRE ATT&CK T1059 — Command and Scripting Interpreter
+
+- rule: Detect Shell Spawn in Container
+  desc: Detects shell execution inside a container signaling a potential container escape attempt - MITRE T1059
+  condition: spawned_process and container.id != "host" and proc.name in (shell_binaries)
+  output: "Shell spawned in container (user=%user.name container=%container.name image=%container.image.repository proc=%proc.name parent=%proc.pname cmdline=%proc.cmdline)"
+  priority: WARNING
+  tags: [container, shell, mitre_execution, T1059]
