@@ -1,0 +1,67 @@
+# Trivy Operator — Continuous CVE Scanning
+# Watches running workloads and rescans as new CVEs are published
+# Complements CI trivy scan (point-in-time) with runtime continuous coverage
+#
+# MITRE ATT&CK coverage:
+# T1190 — Exploit Public-Facing Application (known CVEs in running containers)
+# T1203 — Exploitation for Client Execution (vulnerable dependencies)
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trivy-system
+  labels:
+    app.kubernetes.io/name: trivy-operator
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy-operator
+  namespace: trivy-system
+  labels:
+    app.kubernetes.io/name: trivy-operator
+
+---
+# ClusterRole — cluster-wide read access required because Trivy Operator
+# watches workloads across ALL namespaces (production, monitoring, etc.)
+# Write access scoped only to its own report CRDs — nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy-operator
+  labels:
+    app.kubernetes.io/name: trivy-operator
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "replicationcontrollers", "resourcequotas",
+                "limitranges", "serviceaccounts", "services", "configmaps",
+                "nodes"] # reads node labels to schedule scan jobs correctly
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["vulnerabilityreports", "configauditreports",
+                "clusterconfigauditreports", "exposedsecretreports"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    # patch required — operator uses patch operations when updating existing reports
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy-operator
+  labels:
+    app.kubernetes.io/name: trivy-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy-operator
+subjects:
+  - kind: ServiceAccount
+    name: trivy-operator
+    namespace: trivy-system
