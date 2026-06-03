@@ -1,0 +1,167 @@
+# falco-values.yaml
+# Hardened Falco Helm values for K8s Security Lab
+# Chart: falcosecurity/falco
+# ADR-006: Deploy Falco via Helm Chart Instead of Raw Manifests
+#
+# Deploy:
+#   helm repo add falcosecurity https://falcosecurity.github.io/charts
+#   helm repo update
+#   helm install falco falcosecurity/falco \
+#     --namespace falco-system \
+#     --create-namespace \
+#     --values falco/falco-values.yaml \
+#     --version 4.x.x   # pin to tested version — see ADR-005/ADR-006
+
+# ── Namespace ──────────────────────────────────────────────────────────────────
+namespaceOverride: "falco-system"  # isolated from kube-system — consistent with trivy-system pattern
+
+# ── Driver ─────────────────────────────────────────────────────────────────────
+driver:
+  kind: modern_ebpf   # no kernel module compilation; requires kernel >= 5.8
+                      # Ubuntu 22.04 ships kernel 5.15+ — meets requirement
+                      # Reduces supply chain surface vs kmod (MITRE T1195.001)
+                      # ADR-006: kmod and ebpf (legacy) explicitly rejected
+
+# ── Falco engine config ────────────────────────────────────────────────────────
+falco:
+  # JSON output — structured for log ingestion (Datadog, CloudWatch, Loki)
+  json_output: true
+  json_include_output_property: true
+
+  # Log level — info in lab; reduce to warning in prod to control log volume
+  log_level: info
+  log_stderr: true
+
+  # Priority threshold — WARNING and above generate alerts
+  # DEBUG/INFORMATIONAL/NOTICE are noisy in a shared lab environment
+  priority: WARNING
+
+  # gRPC — disabled; only enable if connecting Falco Sidekick
+  grpc:
+    enabled: false
+    bind_address: ""
+    threadiness: 0
+
+  grpc_output:
+    enabled: false
+
+  # Web server — enabled for liveness probe on /healthz
+  webserver:
+    enabled: true
+    listen_port: 8765
+    k8s_healthz_endpoint: /healthz
+    ssl_enabled: false   # TLS termination handled at ingress layer in prod
+
+  # Output channels — stdout only in lab; add file_output or http_output for prod SIEM
+  stdout_output:
+    enabled: true
+
+  file_output:
+    enabled: false        # enable and set filename for persistent log capture
+
+  http_output:
+    enabled: false        # enable for Falco Sidekick integration
+    url: ""
+
+# ── Custom rules ───────────────────────────────────────────────────────────────
+# Mount our container-escape.yaml (T1059) alongside default ruleset.
+# Rules in customRules override default rules with the same rule name.
+customRules:
+  container-escape.yaml: |-
+    # Sourced from falco/rules/container-escape.yaml
+    # Detects shell spawned inside a container — MITRE T1059
+    # Contributed upstream: Falco PR #363
+    - rule: Container Shell Spawn
+      desc: >
+        A shell was spawned inside a container. This may indicate an attacker
+        attempting command execution after initial access (MITRE T1059).
+      condition: >
+        spawned_process
+        and container
+        and container.id != "host"
+        and proc.name in (shell_binaries)
+      output: >
+        Shell spawned in container
+        (user=%user.name container=%container.name image=%container.image.repository
+        shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline
+        container_id=%container.id)
+      priority: WARNING
+      tags: [container, shell, mitre_execution, T1059]
+
+    # Detects defense impairment attempts — MITRE T1562.001
+    # Contributed upstream: Falco PR #367
+    - rule: Impair Defenses in Container
+      desc: >
+        iptables flush/chain deletion or systemctl/service stop targeting
+        security daemons (falco, auditd, sysdig, osquery) inside a container.
+        Indicates MITRE T1562.001 — Disable or Modify System Firewall.
+      condition: >
+        spawned_process
+        and container
+        and container.id != "host"
+        and (
+          (proc.name = "iptables" and proc.args contains "-F")
+          or (proc.name = "iptables" and proc.args contains "--flush")
+          or (proc.name = "iptables" and proc.args contains "-X")
+          or (proc.name = "iptables" and proc.args contains "--delete-chain")
+          or (
+            proc.name in ("systemctl", "service")
+            and proc.args contains "stop"
+            and proc.args pmatch (falco, auditd, sysdig, osquery)
+          )
+        )
+      output: >
+        Defense impairment attempt in container
+        (user=%user.name container=%container.name image=%container.image.repository
+        cmd=%proc.cmdline container_id=%container.id)
+      priority: CRITICAL
+      tags: [container, defense_evasion, mitre_defense_evasion, T1562.001]
+
+# ── Resources ──────────────────────────────────────────────────────────────────
+# Explicit limits prevent resource exhaustion and satisfy PDB requirements.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+
+# ── RBAC ───────────────────────────────────────────────────────────────────────
+rbac:
+  create: true   # Helm manages least-privilege ClusterRole; avoids manual drift
+
+# ── Service account ────────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ── Tolerations ────────────────────────────────────────────────────────────────
+# Allow scheduling on control-plane nodes for full cluster visibility.
+# Remove if security policy prohibits workloads on control-plane.
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+
+# ── Update strategy ────────────────────────────────────────────────────────────
+# RollingUpdate ensures continuous coverage during upgrades (no detection gap).
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+# ── Pod security ───────────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: false   # Falco requires root for kernel-level access — documented exception
+  # Note: modern_ebpf reduces the privilege footprint vs kmod (no kernel module loading)
+
+# ── Falco Sidekick (disabled — enable in prod) ─────────────────────────────────
+falcosidekick:
+  enabled: false
+  # To enable: set enabled: true and configure output targets (Slack, PagerDuty, etc.)
+  # See: https://github.com/falcosecurity/falcosidekick
