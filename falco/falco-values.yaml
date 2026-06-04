@@ -36,15 +36,6 @@ falco:
   # DEBUG/INFORMATIONAL/NOTICE are noisy in a shared lab environment
   priority: WARNING
 
-  # gRPC — disabled; only enable if connecting Falco Sidekick
-  grpc:
-    enabled: false
-    bind_address: ""
-    threadiness: 0
-
-  grpc_output:
-    enabled: false
-
   # Web server — enabled for liveness probe on /healthz
   webserver:
     enabled: true
