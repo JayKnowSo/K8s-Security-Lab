@@ -1,10 +1,49 @@
 # Falco Custom Rules — K8s Security Lab
-# Detects container escape attempts via shell spawn
-# MITRE ATT&CK T1059 — Command and Scripting Interpreter
+# Canonical source — content is inlined verbatim into falco-values.yaml customRules.
+# Any edit here must be mirrored in falco-values.yaml.
 
-- rule: Detect Shell Spawn in Container
-  desc: Detects shell execution inside a container signaling a potential container escape attempt - MITRE T1059
-  condition: spawned_process and container.id != "host" and proc.name in (shell_binaries)
-  output: "Shell spawned in container (user=%user.name container=%container.name image=%container.image.repository proc=%proc.name parent=%proc.pname cmdline=%proc.cmdline)"
+# MITRE ATT&CK T1059 — Command and Scripting Interpreter
+- rule: Container Shell Spawn
+  desc: >
+    A shell was spawned inside a container. This may indicate an attacker
+    attempting command execution after initial access (MITRE T1059).
+  condition: >
+    spawned_process
+    and container
+    and container.id != "host"
+    and proc.name in (shell_binaries)
+  output: >
+    Shell spawned in container
+    (user=%user.name container=%container.name image=%container.image.repository
+    shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline
+    container_id=%container.id)
   priority: WARNING
   tags: [container, shell, mitre_execution, T1059]
+
+# MITRE ATT&CK T1562.001 — Disable or Modify System Firewall
+- rule: Impair Defenses in Container
+  desc: >
+    iptables flush/chain deletion or systemctl/service stop targeting
+    security daemons (falco, auditd, sysdig, osquery) inside a container.
+    Indicates MITRE T1562.001 — Disable or Modify System Firewall.
+  condition: >
+    spawned_process
+    and container
+    and container.id != "host"
+    and (
+      (proc.name = "iptables" and proc.args contains "-F")
+      or (proc.name = "iptables" and proc.args contains "--flush")
+      or (proc.name = "iptables" and proc.args contains "-X")
+      or (proc.name = "iptables" and proc.args contains "--delete-chain")
+      or (
+        proc.name in ("systemctl", "service")
+        and proc.args contains "stop"
+        and proc.args pmatch (falco, auditd, sysdig, osquery)
+      )
+    )
+  output: >
+    Defense impairment attempt in container
+    (user=%user.name container=%container.name image=%container.image.repository
+    cmd=%proc.cmdline container_id=%container.id)
+  priority: CRITICAL
+  tags: [container, defense_evasion, mitre_defense_evasion, T1562.001]

@@ -19,7 +19,7 @@ spec:
       type: RuntimeDefault
   containers:
   - name: compliant-pod
-    image: nginxinc/nginx-unprivileged:alpine
+    image: nginxinc/nginx-unprivileged@sha256:a0f9dc41789992dae4dce1ed4db44f0ad662012c5cfced9751e9177a84081958 # alpine
     securityContext:
       runAsNonRoot: true
       runAsUser: 1001

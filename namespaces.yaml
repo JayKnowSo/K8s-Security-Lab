@@ -12,3 +12,5 @@ metadata:
   name: monitoring
   labels:
     env: monitoring
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

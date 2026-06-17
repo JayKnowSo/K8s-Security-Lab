@@ -44,3 +44,8 @@ spec:
     - namespaceSelector:
         matchLabels:
           env: production
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP

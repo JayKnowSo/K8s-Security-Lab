@@ -10,7 +10,7 @@
 #     --namespace falco-system \
 #     --create-namespace \
 #     --values falco/falco-values.yaml \
-#     --version 4.x.x   # pin to tested version — see ADR-005/ADR-006
+#     --version 4.22.0  # pin to tested version — see ADR-005/ADR-006
 
 # ── Namespace ──────────────────────────────────────────────────────────────────
 namespaceOverride: "falco-system"  # isolated from kube-system — consistent with trivy-system pattern
@@ -59,7 +59,7 @@ falco:
 # Rules in customRules override default rules with the same rule name.
 customRules:
   container-escape.yaml: |-
-    # Sourced from falco/rules/container-escape.yaml
+    # Inlined from falco/rules/container-escape.yaml (canonical source — keep in sync)
     # Detects shell spawned inside a container — MITRE T1059
     # Contributed upstream: Falco PR #363
     - rule: Container Shell Spawn

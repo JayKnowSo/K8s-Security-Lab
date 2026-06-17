@@ -10,3 +10,8 @@ secrets/
 # Local kind cluster config
 kubeconfig*
 main
+
+# Claude Code internal files
+.claude/
+claude.md
+CLAUDE.md
