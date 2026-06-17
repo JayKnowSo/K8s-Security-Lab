@@ -5,8 +5,8 @@
 Runtime security for Kubernetes — syscall-level threat detection, hardened admission controls, continuous vulnerability scanning, and a supply-chain-hardened CI pipeline.
 
 Two of the custom Falco rules in this lab were contributed upstream to the Falco OSS project:
-- **[PR #363](https://github.com/falcosecurity/falco/pull/363)** — Container shell spawn detection (MITRE T1059)
-- **[PR #367](https://github.com/falcosecurity/falco/pull/367)** — Impair Defenses detection: iptables flush + security daemon stop (MITRE T1562.001)
+- **[PR #363](https://github.com/falcosecurity/rules/pull/363)** — Container shell spawn detection (MITRE T1059)
+- **[PR #367](https://github.com/falcosecurity/rules/pull/367)** — Impair Defenses detection: iptables flush + security daemon stop (MITRE T1562.001)
 
 ---
 
@@ -147,4 +147,4 @@ kind v0.22.0 · Falco (modern_ebpf) · Trivy Operator · kubeconform · kubectl 
 
 ## Author
 
-Jemel Padilla — [GitHub](https://github.com/JayKnowso)
+Jemel Padilla — [GitHub](https://github.com/JayKnowSo)
